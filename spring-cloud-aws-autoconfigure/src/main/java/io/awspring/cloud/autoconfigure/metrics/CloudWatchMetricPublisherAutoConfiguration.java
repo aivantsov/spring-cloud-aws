@@ -35,25 +35,23 @@ import software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClientBuilder;
  * @since 3.0.0
  */
 @AutoConfiguration
-@ConditionalOnClass({CloudWatchMetricPublisher.class, CloudWatchAsyncClient.class})
+@ConditionalOnClass({ CloudWatchMetricPublisher.class, CloudWatchAsyncClient.class })
 @ConditionalOnProperty(value = "spring.cloud.aws.cloudwatch.enabled", matchIfMissing = true)
 @EnableConfigurationProperties(CloudWatchProperties.class)
 public class CloudWatchMetricPublisherAutoConfiguration {
 
-    @Bean
-    @ConditionalOnMissingBean
-    public CloudWatchMetricPublisher cloudWatchMetricPublisher(CloudWatchAsyncClient client) {
-        return CloudWatchMetricPublisher.builder()
-                .cloudWatchClient(client)
-                .build();
-    }
+	@Bean
+	@ConditionalOnMissingBean
+	public CloudWatchMetricPublisher cloudWatchMetricPublisher(CloudWatchAsyncClient client) {
+		return CloudWatchMetricPublisher.builder().cloudWatchClient(client).build();
+	}
 
-    @Bean
-    @ConditionalOnMissingBean
-    public CloudWatchAsyncClient cloudWatchAsyncClient(CloudWatchProperties properties,
-                                                       AwsClientBuilderConfigurer awsClientBuilderConfigurer,
-                                                       ObjectProvider<AwsClientCustomizer<CloudWatchAsyncClientBuilder>> configurer) {
-        return awsClientBuilderConfigurer
-                .configure(CloudWatchAsyncClient.builder(), properties, configurer.getIfAvailable()).build();
-    }
+	@Bean
+	@ConditionalOnMissingBean
+	public CloudWatchAsyncClient cloudWatchAsyncClient(CloudWatchProperties properties,
+			AwsClientBuilderConfigurer awsClientBuilderConfigurer,
+			ObjectProvider<AwsClientCustomizer<CloudWatchAsyncClientBuilder>> configurer) {
+		return awsClientBuilderConfigurer
+				.configure(CloudWatchAsyncClient.builder(), properties, configurer.getIfAvailable()).build();
+	}
 }
