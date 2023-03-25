@@ -33,7 +33,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class CloudWatchMetricPublisherAutoConfigurationTest {
 
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
-            .withPropertyValues("spring.cloud.aws.region.static-region:eu-west-1")
+            .withPropertyValues("spring.cloud.aws.region.static:eu-west-1")
             .withConfiguration(AutoConfigurations.of(RegionProviderAutoConfiguration.class,
                     CloudWatchMetricPublisherAutoConfiguration.class, AwsAutoConfiguration.class,
                     CredentialsProviderAutoConfiguration.class));

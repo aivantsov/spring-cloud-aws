@@ -42,7 +42,7 @@ public class CloudWatchMetricPublisherAutoConfiguration {
 	@ConditionalOnMissingBean
 	public CloudWatchMetricPublisher cloudWatchMetricPublisher(Optional<CloudWatchAsyncClient> client) {
 		return CloudWatchMetricPublisher.builder()
-				.cloudWatchClient(client.orElseGet(CloudWatchAsyncClient::create))
+				.cloudWatchClient(client.orElse(null))
 				.build();
 	}
 
