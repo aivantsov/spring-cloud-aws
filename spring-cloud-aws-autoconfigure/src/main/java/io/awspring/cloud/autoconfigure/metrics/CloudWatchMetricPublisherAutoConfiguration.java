@@ -15,9 +15,6 @@
  */
 package io.awspring.cloud.autoconfigure.metrics;
 
-import io.awspring.cloud.autoconfigure.core.AwsClientBuilderConfigurer;
-import io.awspring.cloud.autoconfigure.core.AwsClientCustomizer;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -26,7 +23,8 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import software.amazon.awssdk.metrics.publishers.cloudwatch.CloudWatchMetricPublisher;
 import software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClient;
-import software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClientBuilder;
+
+import java.util.Optional;
 
 /**
  * Configuration to aggregate and upload service client metrics to Amazon CloudWatch.
@@ -42,16 +40,10 @@ public class CloudWatchMetricPublisherAutoConfiguration {
 
 	@Bean
 	@ConditionalOnMissingBean
-	public CloudWatchMetricPublisher cloudWatchMetricPublisher(CloudWatchAsyncClient client) {
-		return CloudWatchMetricPublisher.builder().cloudWatchClient(client).build();
+	public CloudWatchMetricPublisher cloudWatchMetricPublisher(Optional<CloudWatchAsyncClient> client) {
+		return CloudWatchMetricPublisher.builder()
+				.cloudWatchClient(client.orElseGet(CloudWatchAsyncClient::create))
+				.build();
 	}
 
-	@Bean
-	@ConditionalOnMissingBean
-	public CloudWatchAsyncClient cloudWatchAsyncClient(CloudWatchProperties properties,
-			AwsClientBuilderConfigurer awsClientBuilderConfigurer,
-			ObjectProvider<AwsClientCustomizer<CloudWatchAsyncClientBuilder>> configurer) {
-		return awsClientBuilderConfigurer
-				.configure(CloudWatchAsyncClient.builder(), properties, configurer.getIfAvailable()).build();
-	}
 }
