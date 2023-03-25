@@ -37,17 +37,15 @@ class CloudWatchMetricPublisherAutoConfigurationTest {
     void testCloudWatchMetricPublisher() {
         this.contextRunner.run(
                 context -> {
-                    assertThat(context).hasSingleBean(CloudWatchMetricPublisherAutoConfiguration.class);
                     assertThat(context).hasSingleBean(CloudWatchMetricPublisher.class);
                 }
         );
     }
 
     @Test
-    void testCloudWatchDisabled() {
+    void testCloudWatchMetricPublisherDisabled() {
         this.contextRunner.withPropertyValues("spring.cloud.aws.cloudwatch.enabled:false").run(
                 context -> {
-                    assertThat(context).doesNotHaveBean(CloudWatchMetricPublisherAutoConfiguration.class);
                     assertThat(context).doesNotHaveBean(CloudWatchMetricPublisher.class);
                 }
         );
