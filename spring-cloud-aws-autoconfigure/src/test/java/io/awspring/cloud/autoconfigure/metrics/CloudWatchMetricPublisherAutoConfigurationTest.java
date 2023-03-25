@@ -32,19 +32,20 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class CloudWatchMetricPublisherAutoConfigurationTest {
 
-	private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
-			.withPropertyValues("spring.cloud.aws.region.static:eu-central-1").withConfiguration(
-					AutoConfigurations.of(CloudWatchMetricPublisherAutoConfiguration.class, AwsAutoConfiguration.class,
-							CredentialsProviderAutoConfiguration.class, RegionProviderAutoConfiguration.class));
+    private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
+            .withPropertyValues("spring.cloud.aws.region.static-region:eu-west-1")
+            .withConfiguration(AutoConfigurations.of(RegionProviderAutoConfiguration.class,
+                    CloudWatchMetricPublisherAutoConfiguration.class, AwsAutoConfiguration.class,
+                    CredentialsProviderAutoConfiguration.class));
 
-	@Test
-	void testCloudWatchMetricPublisher() {
-		this.contextRunner.run(context -> assertThat(context).hasSingleBean(CloudWatchMetricPublisher.class));
-	}
+    @Test
+    void testCloudWatchMetricPublisher() {
+        this.contextRunner.run(context -> assertThat(context).hasSingleBean(CloudWatchMetricPublisher.class));
+    }
 
-	@Test
-	void testCloudWatchMetricPublisherDisabled() {
-		this.contextRunner.withPropertyValues("spring.cloud.aws.cloudwatch.enabled:false")
-				.run(context -> assertThat(context).doesNotHaveBean(CloudWatchMetricPublisher.class));
-	}
+    @Test
+    void testCloudWatchMetricPublisherDisabled() {
+        this.contextRunner.withPropertyValues("spring.cloud.aws.cloudwatch.enabled:false")
+                .run(context -> assertThat(context).doesNotHaveBean(CloudWatchMetricPublisher.class));
+    }
 }
