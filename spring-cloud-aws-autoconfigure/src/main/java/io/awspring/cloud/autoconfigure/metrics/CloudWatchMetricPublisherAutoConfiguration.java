@@ -15,13 +15,18 @@
  */
 package io.awspring.cloud.autoconfigure.metrics;
 
+import io.awspring.cloud.autoconfigure.core.AwsClientBuilderConfigurer;
+import io.awspring.cloud.autoconfigure.core.AwsClientCustomizer;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import software.amazon.awssdk.metrics.publishers.cloudwatch.CloudWatchMetricPublisher;
 import software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClient;
+import software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClientBuilder;
 
 /**
  * Configuration to aggregate and upload service client metrics to Amazon CloudWatch.
@@ -32,6 +37,7 @@ import software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClient;
 @AutoConfiguration
 @ConditionalOnClass({CloudWatchMetricPublisher.class, CloudWatchAsyncClient.class})
 @ConditionalOnProperty(value = "spring.cloud.aws.cloudwatch.enabled", matchIfMissing = true)
+@EnableConfigurationProperties(CloudWatchProperties.class)
 public class CloudWatchMetricPublisherAutoConfiguration {
 
     @Bean
@@ -40,5 +46,14 @@ public class CloudWatchMetricPublisherAutoConfiguration {
         return CloudWatchMetricPublisher.builder()
                 .cloudWatchClient(client)
                 .build();
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public CloudWatchAsyncClient cloudWatchAsyncClient(CloudWatchProperties properties,
+                                                       AwsClientBuilderConfigurer awsClientBuilderConfigurer,
+                                                       ObjectProvider<AwsClientCustomizer<CloudWatchAsyncClientBuilder>> configurer) {
+        return awsClientBuilderConfigurer
+                .configure(CloudWatchAsyncClient.builder(), properties, configurer.getIfAvailable()).build();
     }
 }

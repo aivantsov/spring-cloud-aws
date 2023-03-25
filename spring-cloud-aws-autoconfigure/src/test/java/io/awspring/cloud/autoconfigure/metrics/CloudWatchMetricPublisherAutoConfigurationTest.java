@@ -15,6 +15,9 @@
  */
 package io.awspring.cloud.autoconfigure.metrics;
 
+import io.awspring.cloud.autoconfigure.core.AwsAutoConfiguration;
+import io.awspring.cloud.autoconfigure.core.CredentialsProviderAutoConfiguration;
+import io.awspring.cloud.autoconfigure.core.RegionProviderAutoConfiguration;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
@@ -31,23 +34,18 @@ class CloudWatchMetricPublisherAutoConfigurationTest {
 
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
             .withPropertyValues("spring.cloud.aws.region.static:eu-central-1")
-            .withConfiguration(AutoConfigurations.of(CloudWatchMetricPublisherAutoConfiguration.class));
+            .withConfiguration(AutoConfigurations.of(CloudWatchMetricPublisherAutoConfiguration.class,
+                    AwsAutoConfiguration.class, CredentialsProviderAutoConfiguration.class,
+                    RegionProviderAutoConfiguration.class));
 
     @Test
     void testCloudWatchMetricPublisher() {
-        this.contextRunner.run(
-                context -> {
-                    assertThat(context).hasSingleBean(CloudWatchMetricPublisher.class);
-                }
-        );
+        this.contextRunner.run(context -> assertThat(context).hasSingleBean(CloudWatchMetricPublisher.class));
     }
 
     @Test
     void testCloudWatchMetricPublisherDisabled() {
-        this.contextRunner.withPropertyValues("spring.cloud.aws.cloudwatch.enabled:false").run(
-                context -> {
-                    assertThat(context).doesNotHaveBean(CloudWatchMetricPublisher.class);
-                }
-        );
+        this.contextRunner.withPropertyValues("spring.cloud.aws.cloudwatch.enabled:false")
+                .run(context -> assertThat(context).doesNotHaveBean(CloudWatchMetricPublisher.class));
     }
 }
