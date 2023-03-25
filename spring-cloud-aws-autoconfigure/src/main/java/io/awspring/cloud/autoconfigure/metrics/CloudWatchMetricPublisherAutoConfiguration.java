@@ -21,7 +21,9 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.metrics.publishers.cloudwatch.CloudWatchMetricPublisher;
+import software.amazon.awssdk.regions.providers.AwsRegionProvider;
 import software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClient;
 
 import java.util.Optional;
@@ -33,17 +35,23 @@ import java.util.Optional;
  * @since 3.0.0
  */
 @AutoConfiguration
-@ConditionalOnClass({ CloudWatchMetricPublisher.class, CloudWatchAsyncClient.class })
+@ConditionalOnClass({CloudWatchMetricPublisher.class, CloudWatchAsyncClient.class})
 @ConditionalOnProperty(value = "spring.cloud.aws.cloudwatch.enabled", matchIfMissing = true)
 @EnableConfigurationProperties(CloudWatchProperties.class)
 public class CloudWatchMetricPublisherAutoConfiguration {
 
-	@Bean
-	@ConditionalOnMissingBean
-	public CloudWatchMetricPublisher cloudWatchMetricPublisher(Optional<CloudWatchAsyncClient> client) {
-		return CloudWatchMetricPublisher.builder()
-				.cloudWatchClient(client.orElse(null))
-				.build();
-	}
+    @Bean
+    @ConditionalOnMissingBean
+    public CloudWatchMetricPublisher cloudWatchMetricPublisher(AwsRegionProvider regionProvider,
+                                                               AwsCredentialsProvider credentialsProvider,
+                                                               Optional<CloudWatchAsyncClient> client) {
+        return CloudWatchMetricPublisher.builder()
+                .cloudWatchClient(
+                        client.orElse(CloudWatchAsyncClient.builder()
+                                .region(regionProvider.getRegion())
+                                .credentialsProvider(credentialsProvider)
+                                .build()))
+                .build();
+    }
 
 }
