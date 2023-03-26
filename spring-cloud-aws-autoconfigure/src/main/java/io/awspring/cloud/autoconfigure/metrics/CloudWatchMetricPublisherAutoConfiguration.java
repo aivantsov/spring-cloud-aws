@@ -43,8 +43,7 @@ public class CloudWatchMetricPublisherAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     public CloudWatchMetricPublisher cloudWatchMetricPublisher(AwsRegionProvider regionProvider,
-                                                               AwsCredentialsProvider credentialsProvider,
-                                                               Optional<CloudWatchAsyncClient> client) {
+            AwsCredentialsProvider credentialsProvider, Optional<CloudWatchAsyncClient> client) {
         return CloudWatchMetricPublisher.builder()
                 .cloudWatchClient(
                         client.orElse(CloudWatchAsyncClient.builder()

@@ -15,12 +15,14 @@
  */
 package io.awspring.cloud.autoconfigure.core;
 
+import io.awspring.cloud.autoconfigure.metrics.CloudWatchMetricPublisherAutoConfiguration;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.test.util.ReflectionTestUtils;
 import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.core.client.config.SdkAdvancedClientOption;
+import software.amazon.awssdk.metrics.publishers.cloudwatch.CloudWatchMetricPublisher;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -34,11 +36,13 @@ class AwsAutoConfigurationTest {
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
             .withPropertyValues("spring.cloud.aws.region.static:eu-central-1")
             .withConfiguration(AutoConfigurations.of(AwsAutoConfiguration.class, CredentialsProviderAutoConfiguration.class,
-                    RegionProviderAutoConfiguration.class));
+                    RegionProviderAutoConfiguration.class, CloudWatchMetricPublisherAutoConfiguration.class));
 
     @Test
     void awsClientBuilderConfigurer() {
-        this.contextRunner.run(context -> {
+        this.contextRunner.withPropertyValues("spring.cloud.aws.cloudwatch.enabled:false")
+                .run(context -> {
+            assertThat(context).doesNotHaveBean(CloudWatchMetricPublisher.class);
             var configurer = context.getBean(AwsClientBuilderConfigurer.class);
             assertThat(configurer).isNotNull();
             var clientOverrideConfiguration = (ClientOverrideConfiguration) ReflectionTestUtils.getField(configurer,
