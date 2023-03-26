@@ -17,7 +17,6 @@ package io.awspring.cloud.autoconfigure.core;
 
 import io.awspring.cloud.autoconfigure.AwsClientProperties;
 import io.awspring.cloud.core.SpringCloudClientConfiguration;
-import java.util.Optional;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
@@ -26,6 +25,8 @@ import software.amazon.awssdk.awscore.client.builder.AwsClientBuilder;
 import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.regions.providers.AwsRegionProvider;
+
+import java.util.Optional;
 
 /**
  * Provides a convenience method to apply common configuration to any {@link AwsClientBuilder}.
@@ -41,10 +42,15 @@ public class AwsClientBuilderConfigurer {
 
 	AwsClientBuilderConfigurer(AwsCredentialsProvider credentialsProvider, AwsRegionProvider regionProvider,
 			AwsProperties awsProperties) {
+		this(credentialsProvider, regionProvider, awsProperties, new SpringCloudClientConfiguration().clientOverrideConfiguration());
+	}
+
+	AwsClientBuilderConfigurer(AwsCredentialsProvider credentialsProvider, AwsRegionProvider regionProvider,
+			AwsProperties awsProperties, ClientOverrideConfiguration clientOverrideConfiguration) {
 		this.credentialsProvider = credentialsProvider;
 		this.regionProvider = regionProvider;
 		this.awsProperties = awsProperties;
-		this.clientOverrideConfiguration = new SpringCloudClientConfiguration().clientOverrideConfiguration();
+		this.clientOverrideConfiguration = clientOverrideConfiguration;
 	}
 
 	public <T extends AwsClientBuilder<?, ?>> T configure(T builder) {
