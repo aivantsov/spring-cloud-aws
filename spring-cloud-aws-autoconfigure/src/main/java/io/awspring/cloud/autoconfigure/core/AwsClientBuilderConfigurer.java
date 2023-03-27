@@ -16,7 +16,6 @@
 package io.awspring.cloud.autoconfigure.core;
 
 import io.awspring.cloud.autoconfigure.AwsClientProperties;
-import io.awspring.cloud.core.SpringCloudClientConfiguration;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
@@ -39,11 +38,6 @@ public class AwsClientBuilderConfigurer {
 	private final AwsRegionProvider regionProvider;
 	private final AwsProperties awsProperties;
 	private final ClientOverrideConfiguration clientOverrideConfiguration;
-
-	AwsClientBuilderConfigurer(AwsCredentialsProvider credentialsProvider, AwsRegionProvider regionProvider,
-			AwsProperties awsProperties) {
-		this(credentialsProvider, regionProvider, awsProperties, new SpringCloudClientConfiguration().clientOverrideConfiguration());
-	}
 
 	AwsClientBuilderConfigurer(AwsCredentialsProvider credentialsProvider, AwsRegionProvider regionProvider,
 			AwsProperties awsProperties, ClientOverrideConfiguration clientOverrideConfiguration) {
