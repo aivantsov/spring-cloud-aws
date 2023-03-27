@@ -18,6 +18,7 @@ package io.awspring.cloud.autoconfigure.core;
 import io.awspring.cloud.autoconfigure.metrics.CloudWatchMetricPublisherAutoConfiguration;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
+import org.springframework.boot.test.context.assertj.AssertableApplicationContext;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.test.util.ReflectionTestUtils;
 import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
@@ -39,16 +40,37 @@ class AwsAutoConfigurationTest {
                     RegionProviderAutoConfiguration.class, CloudWatchMetricPublisherAutoConfiguration.class));
 
     @Test
-    void awsClientBuilderConfigurer() {
+    void awsClientBuilderConfigurerWithoutMetricPublisher() {
         this.contextRunner.withPropertyValues("spring.cloud.aws.cloudwatch.enabled:false")
                 .run(context -> {
-            assertThat(context).doesNotHaveBean(CloudWatchMetricPublisher.class);
-            var configurer = context.getBean(AwsClientBuilderConfigurer.class);
-            assertThat(configurer).isNotNull();
-            var clientOverrideConfiguration = (ClientOverrideConfiguration) ReflectionTestUtils.getField(configurer,
-                    "clientOverrideConfiguration");
-            assertThat(clientOverrideConfiguration.advancedOption(SdkAdvancedClientOption.USER_AGENT_SUFFIX))
-                    .matches(p -> p.isPresent() && p.get().startsWith("spring-cloud-aws"));
+                    assertThat(context).doesNotHaveBean(CloudWatchMetricPublisher.class);
+                    var clientOverrideConfiguration = getClientOverrideConfiguration(context);
+                    shouldHaveUserAgentSuffix(clientOverrideConfiguration);
+                    assertThat(clientOverrideConfiguration.metricPublishers()).isEmpty();
+                });
+    }
+
+    private static void shouldHaveUserAgentSuffix(ClientOverrideConfiguration clientOverrideConfiguration) {
+        assertThat(clientOverrideConfiguration.advancedOption(SdkAdvancedClientOption.USER_AGENT_SUFFIX))
+                .matches(p -> p.isPresent() && p.get().startsWith("spring-cloud-aws"));
+    }
+
+    private static ClientOverrideConfiguration getClientOverrideConfiguration(AssertableApplicationContext context) {
+        var configurer = context.getBean(AwsClientBuilderConfigurer.class);
+        assertThat(configurer).isNotNull();
+        var clientOverrideConfiguration = (ClientOverrideConfiguration) ReflectionTestUtils.getField(configurer,
+                "clientOverrideConfiguration");
+        assertThat(clientOverrideConfiguration).isNotNull();
+        return clientOverrideConfiguration;
+    }
+
+    @Test
+    void awsClientBuilderConfigurerWithMetricPublisher() {
+        this.contextRunner.run(context -> {
+            assertThat(context).hasSingleBean(CloudWatchMetricPublisher.class);
+            var clientOverrideConfiguration = getClientOverrideConfiguration(context);
+            shouldHaveUserAgentSuffix(clientOverrideConfiguration);
+            assertThat(clientOverrideConfiguration.metricPublishers()).hasSize(1);
         });
     }
 }
