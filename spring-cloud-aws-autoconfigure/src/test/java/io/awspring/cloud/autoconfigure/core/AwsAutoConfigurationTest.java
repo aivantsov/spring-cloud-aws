@@ -52,7 +52,7 @@ class AwsAutoConfigurationTest {
 
     private static void shouldHaveUserAgentSuffix(ClientOverrideConfiguration clientOverrideConfiguration) {
         assertThat(clientOverrideConfiguration.advancedOption(SdkAdvancedClientOption.USER_AGENT_SUFFIX)).isPresent()
-			.hasValueSatisfying(value -> assertThat(value).startsWith("spring-cloud-aws"));
+			.hasValueSatisfying(actual -> assertThat(actual).startsWith("spring-cloud-aws"));
     }
 
     private static ClientOverrideConfiguration getClientOverrideConfiguration(AssertableApplicationContext context) {
