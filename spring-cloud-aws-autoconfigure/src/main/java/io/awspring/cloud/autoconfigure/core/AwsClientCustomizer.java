@@ -22,6 +22,9 @@ import software.amazon.awssdk.awscore.client.builder.AwsSyncClientBuilder;
 import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.http.SdkHttpClient;
 import software.amazon.awssdk.http.async.SdkAsyncHttpClient;
+import software.amazon.awssdk.metrics.MetricPublisher;
+
+import java.util.List;
 
 /**
  * @author Matej Nedić
@@ -56,7 +59,9 @@ public interface AwsClientCustomizer<T> {
 
 	static <V extends AwsClientBuilder<?, ?>> void apply(AwsClientCustomizer<V> configurer, V builder) {
 		if (configurer.overrideConfiguration() != null) {
-			builder.overrideConfiguration(configurer.overrideConfiguration());
+			List<MetricPublisher> metricPublishers = builder.overrideConfiguration().metricPublishers();
+			builder.overrideConfiguration(configurer.overrideConfiguration())
+				.overrideConfiguration(c -> c.metricPublishers(metricPublishers));
 		}
 
 		if (builder instanceof AwsSyncClientBuilder) {

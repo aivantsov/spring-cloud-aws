@@ -16,32 +16,29 @@
 package io.awspring.cloud.autoconfigure.config;
 
 import io.awspring.cloud.autoconfigure.AwsClientProperties;
-import io.awspring.cloud.autoconfigure.core.AwsProperties;
-import io.awspring.cloud.autoconfigure.core.CredentialsProperties;
-import io.awspring.cloud.autoconfigure.core.CredentialsProviderAutoConfiguration;
-import io.awspring.cloud.autoconfigure.core.RegionProperties;
-import io.awspring.cloud.autoconfigure.core.RegionProviderAutoConfiguration;
+import io.awspring.cloud.autoconfigure.core.*;
 import io.awspring.cloud.core.SpringCloudClientConfiguration;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
 import org.springframework.boot.BootstrapContext;
 import org.springframework.boot.BootstrapRegistry;
 import org.springframework.boot.ConfigurableBootstrapContext;
-import org.springframework.boot.context.config.ConfigDataLocation;
-import org.springframework.boot.context.config.ConfigDataLocationNotFoundException;
-import org.springframework.boot.context.config.ConfigDataLocationResolver;
-import org.springframework.boot.context.config.ConfigDataLocationResolverContext;
-import org.springframework.boot.context.config.ConfigDataResource;
-import org.springframework.boot.context.config.ConfigDataResourceNotFoundException;
+import org.springframework.boot.context.config.*;
 import org.springframework.boot.context.properties.bind.Bindable;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.util.ClassUtils;
 import org.springframework.util.StringUtils;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.awscore.client.builder.AwsClientBuilder;
+import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
+import software.amazon.awssdk.metrics.MetricPublisher;
+import software.amazon.awssdk.metrics.publishers.cloudwatch.CloudWatchMetricPublisher;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.regions.providers.AwsRegionProvider;
+import software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClient;
+
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * Base class for AWS specific {@link ConfigDataLocationResolver}s.
@@ -51,7 +48,9 @@ import software.amazon.awssdk.regions.providers.AwsRegionProvider;
  * @since 3.0
  */
 public abstract class AbstractAwsConfigDataLocationResolver<T extends ConfigDataResource>
-		implements ConfigDataLocationResolver<T> {
+	implements ConfigDataLocationResolver<T> {
+
+	public static final String CLOUD_WATCH_METRIC_PUBLISHER = "software.amazon.awssdk.metrics.publishers.cloudwatch.CloudWatchMetricPublisher";
 
 	protected abstract String getPrefix();
 
@@ -62,12 +61,12 @@ public abstract class AbstractAwsConfigDataLocationResolver<T extends ConfigData
 
 	@Override
 	public List<T> resolve(ConfigDataLocationResolverContext context, ConfigDataLocation location)
-			throws ConfigDataLocationNotFoundException, ConfigDataResourceNotFoundException {
+		throws ConfigDataLocationNotFoundException, ConfigDataResourceNotFoundException {
 		return Collections.emptyList();
 	}
 
 	protected <C> void registerAndPromoteBean(ConfigDataLocationResolverContext context, Class<C> type,
-			BootstrapRegistry.InstanceSupplier<C> supplier) {
+											  BootstrapRegistry.InstanceSupplier<C> supplier) {
 		registerBean(context, type, supplier);
 		context.getBootstrapContext().addCloseListener(event -> {
 			String name = "configData" + type.getSimpleName();
@@ -88,19 +87,19 @@ public abstract class AbstractAwsConfigDataLocationResolver<T extends ConfigData
 	}
 
 	protected <C> void registerBean(ConfigDataLocationResolverContext context, Class<C> type,
-			BootstrapRegistry.InstanceSupplier<C> supplier) {
+									BootstrapRegistry.InstanceSupplier<C> supplier) {
 		ConfigurableBootstrapContext bootstrapContext = context.getBootstrapContext();
 		bootstrapContext.registerIfAbsent(type, supplier);
 	}
 
 	protected CredentialsProperties loadCredentialsProperties(Binder binder) {
 		return binder.bind(CredentialsProperties.PREFIX, Bindable.of(CredentialsProperties.class))
-				.orElseGet(CredentialsProperties::new);
+			.orElseGet(CredentialsProperties::new);
 	}
 
 	protected RegionProperties loadRegionProperties(Binder binder) {
 		return binder.bind(RegionProperties.PREFIX, Bindable.of(RegionProperties.class))
-				.orElseGet(RegionProperties::new);
+			.orElseGet(RegionProperties::new);
 	}
 
 	protected AwsProperties loadAwsProperties(Binder binder) {
@@ -115,13 +114,12 @@ public abstract class AbstractAwsConfigDataLocationResolver<T extends ConfigData
 	}
 
 	protected <T extends AwsClientBuilder<?, ?>> T configure(T builder, AwsClientProperties properties,
-			BootstrapContext context) {
+															 BootstrapContext context) {
 		AwsCredentialsProvider credentialsProvider;
 
 		try {
 			credentialsProvider = context.get(AwsCredentialsProvider.class);
-		}
-		catch (IllegalStateException e) {
+		} catch (IllegalStateException e) {
 			CredentialsProperties credentialsProperties = context.get(CredentialsProperties.class);
 			credentialsProvider = CredentialsProviderAutoConfiguration.createCredentialsProvider(credentialsProperties);
 		}
@@ -130,8 +128,7 @@ public abstract class AbstractAwsConfigDataLocationResolver<T extends ConfigData
 
 		try {
 			regionProvider = context.get(AwsRegionProvider.class);
-		}
-		catch (IllegalStateException e) {
+		} catch (IllegalStateException e) {
 			RegionProperties regionProperties = context.get(RegionProperties.class);
 			regionProvider = RegionProviderAutoConfiguration.createRegionProvider(regionProperties);
 		}
@@ -140,18 +137,28 @@ public abstract class AbstractAwsConfigDataLocationResolver<T extends ConfigData
 
 		if (StringUtils.hasLength(properties.getRegion())) {
 			builder.region(Region.of(properties.getRegion()));
-		}
-		else {
+		} else {
 			builder.region(regionProvider.getRegion());
 		}
 		if (properties.getEndpoint() != null) {
 			builder.endpointOverride(properties.getEndpoint());
-		}
-		else if (awsProperties.getEndpoint() != null) {
+		} else if (awsProperties.getEndpoint() != null) {
 			builder.endpointOverride(awsProperties.getEndpoint());
 		}
 		builder.credentialsProvider(credentialsProvider);
-		builder.overrideConfiguration(new SpringCloudClientConfiguration().clientOverrideConfiguration());
+		ClientOverrideConfiguration overrideConfiguration = new SpringCloudClientConfiguration().clientOverrideConfiguration();
+		if (ClassUtils.isPresent(CLOUD_WATCH_METRIC_PUBLISHER, ClassUtils.getDefaultClassLoader())) {
+			MetricPublisher metricPublisher = CloudWatchMetricPublisher.builder().cloudWatchClient(
+				CloudWatchAsyncClient.builder()
+					.region(regionProvider.getRegion())
+					.credentialsProvider(credentialsProvider)
+					.build()
+			).build();
+			overrideConfiguration = overrideConfiguration.toBuilder()
+				.addMetricPublisher(metricPublisher)
+				.build();
+		}
+		builder.overrideConfiguration(overrideConfiguration);
 		return builder;
 	}
 
