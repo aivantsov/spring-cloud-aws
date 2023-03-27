@@ -26,8 +26,6 @@ import software.amazon.awssdk.metrics.publishers.cloudwatch.CloudWatchMetricPubl
 import software.amazon.awssdk.regions.providers.AwsRegionProvider;
 import software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClient;
 
-import java.util.Optional;
-
 /**
  * Configuration to aggregate and upload service client metrics to Amazon CloudWatch.
  *
@@ -43,14 +41,13 @@ public class CloudWatchMetricPublisherAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     public CloudWatchMetricPublisher cloudWatchMetricPublisher(AwsRegionProvider regionProvider,
-            AwsCredentialsProvider credentialsProvider, Optional<CloudWatchAsyncClient> client) {
-        return CloudWatchMetricPublisher.builder()
-                .cloudWatchClient(
-                        client.orElse(CloudWatchAsyncClient.builder()
-                                .region(regionProvider.getRegion())
-                                .credentialsProvider(credentialsProvider)
-                                .build()))
-                .build();
+            AwsCredentialsProvider credentialsProvider) {
+		return CloudWatchMetricPublisher.builder().cloudWatchClient(
+				CloudWatchAsyncClient.builder()
+					.region(regionProvider.getRegion())
+					.credentialsProvider(credentialsProvider)
+					.build()
+			).build();
     }
 
 }
