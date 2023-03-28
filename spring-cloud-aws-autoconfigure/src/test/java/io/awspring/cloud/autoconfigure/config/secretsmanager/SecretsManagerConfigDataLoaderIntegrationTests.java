@@ -191,6 +191,19 @@ class SecretsManagerConfigDataLoaderIntegrationTests {
 	}
 
 	@Test
+	void cloudWatchIsDisabled() {
+		SpringApplication application = new SpringApplication(App.class);
+		application.setWebApplicationType(WebApplicationType.NONE);
+		application.addBootstrapRegistryInitializer(new AwsConfigurerClientConfiguration());
+
+		try (ConfigurableApplicationContext context = runApplication(application,
+				"aws-secretsmanager:/config/spring")) {
+			ConfiguredAwsClient ssmClient = new ConfiguredAwsClient(context.getBean(SecretsManagerClient.class));
+			assertThat(ssmClient.getMetricPublishers()).isEmpty();
+		}
+	}
+
+	@Test
 	void whenKeysAreNotSpecifiedFailsWithHumanReadableFailureMessage(CapturedOutput output) {
 		SpringApplication application = new SpringApplication(App.class);
 		application.setWebApplicationType(WebApplicationType.NONE);

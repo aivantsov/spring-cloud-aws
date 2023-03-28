@@ -25,6 +25,7 @@ import org.springframework.boot.context.config.*;
 import org.springframework.boot.context.properties.bind.Bindable;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.core.env.Environment;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.StringUtils;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
@@ -50,7 +51,8 @@ import java.util.List;
 public abstract class AbstractAwsConfigDataLocationResolver<T extends ConfigDataResource>
 	implements ConfigDataLocationResolver<T> {
 
-	public static final String CLOUD_WATCH_METRIC_PUBLISHER = "software.amazon.awssdk.metrics.publishers.cloudwatch.CloudWatchMetricPublisher";
+	private static final String CLOUD_WATCH_METRIC_PUBLISHER =
+		"software.amazon.awssdk.metrics.publishers.cloudwatch.CloudWatchMetricPublisher";
 
 	protected abstract String getPrefix();
 
@@ -147,16 +149,19 @@ public abstract class AbstractAwsConfigDataLocationResolver<T extends ConfigData
 		}
 		builder.credentialsProvider(credentialsProvider);
 		ClientOverrideConfiguration overrideConfiguration = new SpringCloudClientConfiguration().clientOverrideConfiguration();
+		Environment environment = context.get(Environment.class);
 		if (ClassUtils.isPresent(CLOUD_WATCH_METRIC_PUBLISHER, ClassUtils.getDefaultClassLoader())) {
-			MetricPublisher metricPublisher = CloudWatchMetricPublisher.builder().cloudWatchClient(
-				CloudWatchAsyncClient.builder()
-					.region(regionProvider.getRegion())
-					.credentialsProvider(credentialsProvider)
-					.build()
-			).build();
-			overrideConfiguration = overrideConfiguration.toBuilder()
-				.addMetricPublisher(metricPublisher)
-				.build();
+			if (environment.getProperty("spring.cloud.aws.cloudwatch.enabled", Boolean.class, true)) {
+				MetricPublisher metricPublisher = CloudWatchMetricPublisher.builder().cloudWatchClient(
+					CloudWatchAsyncClient.builder()
+						.region(regionProvider.getRegion())
+						.credentialsProvider(credentialsProvider)
+						.build()
+				).build();
+				overrideConfiguration = overrideConfiguration.toBuilder()
+					.addMetricPublisher(metricPublisher)
+					.build();
+			}
 		}
 		builder.overrideConfiguration(overrideConfiguration);
 		return builder;
