@@ -58,12 +58,13 @@ public interface AwsClientCustomizer<T> {
 	}
 
 	static <V extends AwsClientBuilder<?, ?>> void apply(AwsClientCustomizer<V> configurer, V builder) {
-		if (configurer.overrideConfiguration() != null) {
+		ClientOverrideConfiguration overrideConfiguration = configurer.overrideConfiguration();
+		if (overrideConfiguration != null) {
 			List<MetricPublisher> metricPublishers = builder.overrideConfiguration().metricPublishers();
-			builder.overrideConfiguration(configurer.overrideConfiguration());
 			if (!metricPublishers.isEmpty()) {
-				builder.overrideConfiguration(c -> c.metricPublishers(metricPublishers));
+				overrideConfiguration = overrideConfiguration.toBuilder().metricPublishers(metricPublishers).build();
 			}
+			builder.overrideConfiguration(overrideConfiguration);
 		}
 
 		if (builder instanceof AwsSyncClientBuilder) {
