@@ -17,6 +17,7 @@ package io.awspring.cloud.autoconfigure.config;
 
 import io.awspring.cloud.autoconfigure.AwsClientProperties;
 import io.awspring.cloud.autoconfigure.core.*;
+import io.awspring.cloud.autoconfigure.metrics.CloudWatchProperties;
 import io.awspring.cloud.core.SpringCloudClientConfiguration;
 import org.springframework.boot.BootstrapContext;
 import org.springframework.boot.BootstrapRegistry;
@@ -25,7 +26,6 @@ import org.springframework.boot.context.config.*;
 import org.springframework.boot.context.properties.bind.Bindable;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.context.ConfigurableApplicationContext;
-import org.springframework.core.env.Environment;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.StringUtils;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
@@ -108,6 +108,11 @@ public abstract class AbstractAwsConfigDataLocationResolver<T extends ConfigData
 		return binder.bind(AwsProperties.CONFIG_PREFIX, Bindable.of(AwsProperties.class)).orElseGet(AwsProperties::new);
 	}
 
+	protected CloudWatchProperties loadCloudWatchProperties(Binder binder) {
+		return binder.bind(CloudWatchProperties.CONFIG_PREFIX, Bindable.of(CloudWatchProperties.class))
+			.orElseGet(CloudWatchProperties::new);
+	}
+
 	protected List<String> getCustomContexts(String keys) {
 		if (StringUtils.hasLength(keys)) {
 			return Arrays.asList(keys.split(";"));
@@ -149,9 +154,9 @@ public abstract class AbstractAwsConfigDataLocationResolver<T extends ConfigData
 		}
 		builder.credentialsProvider(credentialsProvider);
 		ClientOverrideConfiguration overrideConfiguration = new SpringCloudClientConfiguration().clientOverrideConfiguration();
-		Environment environment = context.get(Environment.class);
 		if (ClassUtils.isPresent(CLOUD_WATCH_METRIC_PUBLISHER, ClassUtils.getDefaultClassLoader())) {
-			if (environment.getProperty("spring.cloud.aws.cloudwatch.enabled", Boolean.class, true)) {
+			CloudWatchProperties cloudWatchProperties = context.get(CloudWatchProperties.class);
+			if (cloudWatchProperties.isEnabled()) {
 				MetricPublisher metricPublisher = CloudWatchMetricPublisher.builder().cloudWatchClient(
 					CloudWatchAsyncClient.builder()
 						.region(regionProvider.getRegion())

@@ -20,8 +20,7 @@ import io.awspring.cloud.autoconfigure.core.AwsClientCustomizer;
 import io.awspring.cloud.autoconfigure.core.AwsProperties;
 import io.awspring.cloud.autoconfigure.core.CredentialsProperties;
 import io.awspring.cloud.autoconfigure.core.RegionProperties;
-import java.util.ArrayList;
-import java.util.List;
+import io.awspring.cloud.autoconfigure.metrics.CloudWatchProperties;
 import org.apache.commons.logging.Log;
 import org.springframework.boot.BootstrapContext;
 import org.springframework.boot.context.config.ConfigDataLocation;
@@ -33,6 +32,9 @@ import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.boot.logging.DeferredLogFactory;
 import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
 import software.amazon.awssdk.services.secretsmanager.SecretsManagerClientBuilder;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Resolves config data locations in AWS Secrets Manager.
@@ -66,6 +68,7 @@ public class SecretsManagerConfigDataLocationResolver
 			ConfigDataLocationResolverContext resolverContext, ConfigDataLocation location, Profiles profiles)
 			throws ConfigDataLocationNotFoundException {
 		registerBean(resolverContext, AwsProperties.class, loadAwsProperties(resolverContext.getBinder()));
+		registerBean(resolverContext, CloudWatchProperties.class, loadCloudWatchProperties(resolverContext.getBinder()));
 		registerBean(resolverContext, SecretsManagerProperties.class, loadProperties(resolverContext.getBinder()));
 		registerBean(resolverContext, CredentialsProperties.class,
 				loadCredentialsProperties(resolverContext.getBinder()));

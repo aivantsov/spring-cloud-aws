@@ -176,7 +176,7 @@ class SecretsManagerConfigDataLoaderIntegrationTests {
 	}
 
 	@Test
-	void clientIsConfiguredWithCloudWatchMetricsPublisher() {
+	void clientIsConfiguredWithCloudWatchMetricsPublisherByDefault() {
 		SpringApplication application = new SpringApplication(App.class);
 		application.setWebApplicationType(WebApplicationType.NONE);
 		application.addBootstrapRegistryInitializer(new AwsConfigurerClientConfiguration());
@@ -191,13 +191,17 @@ class SecretsManagerConfigDataLoaderIntegrationTests {
 	}
 
 	@Test
-	void cloudWatchIsDisabled() {
+	void cloudWatchMetricsPublisherIsDisabled() {
 		SpringApplication application = new SpringApplication(App.class);
 		application.setWebApplicationType(WebApplicationType.NONE);
 		application.addBootstrapRegistryInitializer(new AwsConfigurerClientConfiguration());
 
-		try (ConfigurableApplicationContext context = runApplication(application,
-				"aws-secretsmanager:/config/spring")) {
+		try (ConfigurableApplicationContext context = application.run(
+			"--spring.cloud.aws.cloudwatch.enabled=false",
+			"--spring.config.import=aws-secretsmanager:/config/spring;/config/second",
+			"--spring.cloud.aws.endpoint=" + localstack.getEndpointOverride(SECRETSMANAGER).toString(),
+			"--spring.cloud.aws.credentials.access-key=noop", "--spring.cloud.aws.credentials.secret-key=noop",
+			"--spring.cloud.aws.region.static=" + REGION)) {
 			ConfiguredAwsClient ssmClient = new ConfiguredAwsClient(context.getBean(SecretsManagerClient.class));
 			assertThat(ssmClient.getMetricPublishers()).isEmpty();
 		}

@@ -25,8 +25,23 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @author Dawid Kublik
  * @author Bernardo Martins
  * @author Eddú Meléndez
+ * @author Andrei Ivantsov
  * @since 2.0.0
  */
-@ConfigurationProperties(prefix = "spring.cloud.aws.cloudwatch")
+@ConfigurationProperties(prefix = CloudWatchProperties.CONFIG_PREFIX)
 public class CloudWatchProperties extends AwsClientProperties {
+	public static final String CONFIG_PREFIX = "spring.cloud.aws.cloudwatch";
+
+	/**
+	 * Whether publishing of metrics to CloudWatch is enabled.
+	 */
+	private boolean enabled = true;
+
+	public boolean isEnabled() {
+		return enabled;
+	}
+
+	public void setEnabled(boolean enabled) {
+		this.enabled = enabled;
+	}
 }
