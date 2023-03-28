@@ -67,8 +67,7 @@ public interface AwsClientCustomizer<T> {
 			builder.overrideConfiguration(overrideConfiguration);
 		}
 
-		if (builder instanceof AwsSyncClientBuilder) {
-			AwsSyncClientBuilder syncClientBuilder = (AwsSyncClientBuilder) builder;
+		if (builder instanceof AwsSyncClientBuilder syncClientBuilder) {
 			if (configurer.httpClient() != null) {
 				syncClientBuilder.httpClient(configurer.httpClient());
 			}
@@ -76,8 +75,7 @@ public interface AwsClientCustomizer<T> {
 				syncClientBuilder.httpClientBuilder(configurer.httpClientBuilder());
 			}
 		}
-		else if (builder instanceof AwsAsyncClientBuilder) {
-			AwsAsyncClientBuilder asyncClientBuilder = (AwsAsyncClientBuilder) builder;
+		else if (builder instanceof AwsAsyncClientBuilder asyncClientBuilder) {
 			if (configurer.asyncHttpClient() != null) {
 				asyncClientBuilder.httpClient(configurer.asyncHttpClient());
 			}
