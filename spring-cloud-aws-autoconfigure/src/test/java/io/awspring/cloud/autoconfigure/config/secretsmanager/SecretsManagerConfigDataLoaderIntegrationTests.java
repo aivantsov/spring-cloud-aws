@@ -15,30 +15,13 @@
  */
 package io.awspring.cloud.autoconfigure.config.secretsmanager;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.fail;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-import static org.testcontainers.containers.localstack.LocalStackContainer.Service.SECRETSMANAGER;
-import static org.testcontainers.shaded.org.awaitility.Awaitility.await;
-
 import io.awspring.cloud.autoconfigure.ConfiguredAwsClient;
-import java.io.IOException;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
-import java.time.Duration;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.springframework.boot.BootstrapRegistry;
-import org.springframework.boot.BootstrapRegistryInitializer;
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.SpringBootConfiguration;
-import org.springframework.boot.WebApplicationType;
+import org.springframework.boot.*;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
@@ -53,9 +36,24 @@ import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.http.SdkHttpClient;
 import software.amazon.awssdk.http.apache.ApacheHttpClient;
+import software.amazon.awssdk.metrics.MetricPublisher;
+import software.amazon.awssdk.metrics.publishers.cloudwatch.CloudWatchMetricPublisher;
 import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
 import software.amazon.awssdk.services.secretsmanager.model.GetSecretValueRequest;
 import software.amazon.awssdk.services.secretsmanager.model.GetSecretValueResponse;
+
+import java.io.IOException;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+import static org.testcontainers.containers.localstack.LocalStackContainer.Service.SECRETSMANAGER;
+import static org.testcontainers.shaded.org.awaitility.Awaitility.await;
 
 /**
  * Integration tests for loading configuration properties from AWS Secrets Manager.
@@ -174,6 +172,21 @@ class SecretsManagerConfigDataLoaderIntegrationTests {
 			ConfiguredAwsClient ssmClient = new ConfiguredAwsClient(context.getBean(SecretsManagerClient.class));
 			assertThat(ssmClient.getApiCallTimeout()).isEqualTo(Duration.ofMillis(2828));
 			assertThat(ssmClient.getSyncHttpClient()).isNotNull();
+		}
+	}
+
+	@Test
+	void clientIsConfiguredWithCloudWatchMetricsPublisher() {
+		SpringApplication application = new SpringApplication(App.class);
+		application.setWebApplicationType(WebApplicationType.NONE);
+		application.addBootstrapRegistryInitializer(new AwsConfigurerClientConfiguration());
+
+		try (ConfigurableApplicationContext context = runApplication(application,
+				"aws-secretsmanager:/config/spring")) {
+			ConfiguredAwsClient ssmClient = new ConfiguredAwsClient(context.getBean(SecretsManagerClient.class));
+			List<MetricPublisher> metricPublishers = ssmClient.getMetricPublishers();
+			assertThat(metricPublishers).hasSize(1)
+				.hasOnlyElementsOfType(CloudWatchMetricPublisher.class);
 		}
 	}
 
