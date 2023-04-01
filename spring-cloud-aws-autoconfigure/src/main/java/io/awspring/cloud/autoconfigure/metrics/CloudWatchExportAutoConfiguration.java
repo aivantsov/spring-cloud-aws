@@ -22,6 +22,11 @@ import io.awspring.cloud.autoconfigure.core.RegionProviderAutoConfiguration;
 import io.micrometer.cloudwatch2.CloudWatchConfig;
 import io.micrometer.cloudwatch2.CloudWatchMeterRegistry;
 import io.micrometer.core.instrument.Clock;
+import software.amazon.awssdk.metrics.publishers.cloudwatch.CloudWatchMetricPublisher;
+import software.amazon.awssdk.regions.providers.AwsRegionProvider;
+import software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClient;
+import software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClientBuilder;
+
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.actuate.autoconfigure.metrics.CompositeMeterRegistryAutoConfiguration;
 import org.springframework.boot.actuate.autoconfigure.metrics.MetricsAutoConfiguration;
@@ -34,9 +39,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
-import software.amazon.awssdk.regions.providers.AwsRegionProvider;
-import software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClient;
-import software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClientBuilder;
+import org.springframework.context.annotation.Configuration;
 
 /**
  * Configuration for exporting metrics to CloudWatch.
@@ -52,15 +55,31 @@ import software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClientBuilder;
 @AutoConfigureAfter({ CredentialsProviderAutoConfiguration.class, RegionProviderAutoConfiguration.class,
 		MetricsAutoConfiguration.class })
 @EnableConfigurationProperties({ CloudWatchRegistryProperties.class, CloudWatchProperties.class })
-@ConditionalOnProperty(prefix = "management.metrics.export.cloudwatch", name = "namespace")
+@ConditionalOnProperty(value = "spring.cloud.aws.cloudwatch.enabled", matchIfMissing = true)
 @ConditionalOnClass({ CloudWatchAsyncClient.class, CloudWatchMeterRegistry.class, AwsRegionProvider.class })
 public class CloudWatchExportAutoConfiguration {
+	@Configuration(proxyBeanMethods = false)
+	@ConditionalOnProperty(prefix = "management.metrics.export.cloudwatch", name = "namespace")
+	static class CloudWatchMeterRegistryConfiguration {
 
-	@Bean
-	@ConditionalOnProperty(value = "spring.cloud.aws.cloudwatch.enabled", matchIfMissing = true)
-	public CloudWatchMeterRegistry cloudWatchMeterRegistry(CloudWatchConfig config, Clock clock,
-			CloudWatchAsyncClient client) {
-		return new CloudWatchMeterRegistry(config, clock, client);
+		@Bean
+		public CloudWatchMeterRegistry cloudWatchMeterRegistry(CloudWatchConfig config, Clock clock,
+				CloudWatchAsyncClient client) {
+			return new CloudWatchMeterRegistry(config, clock, client);
+		}
+
+		@Bean
+		@ConditionalOnMissingBean
+		public CloudWatchConfig cloudWatchConfig(CloudWatchRegistryProperties cloudWatchProperties) {
+			return new CloudWatchPropertiesConfigAdapter(cloudWatchProperties);
+		}
+
+		@Bean
+		@ConditionalOnMissingBean
+		public Clock micrometerClock() {
+			return Clock.SYSTEM;
+		}
+
 	}
 
 	@Bean
@@ -72,16 +91,22 @@ public class CloudWatchExportAutoConfiguration {
 				.configure(CloudWatchAsyncClient.builder(), properties, configurer.getIfAvailable()).build();
 	}
 
-	@Bean
-	@ConditionalOnMissingBean
-	public CloudWatchConfig cloudWatchConfig(CloudWatchRegistryProperties cloudWatchProperties) {
-		return new CloudWatchPropertiesConfigAdapter(cloudWatchProperties);
-	}
+	@Configuration(proxyBeanMethods = false)
+	@ConditionalOnProperty(value = "spring.cloud.aws.cloudwatch.metric-publisher.enabled", matchIfMissing = true)
+	static class CloudWatchMetricPublisherConfiguration {
 
-	@Bean
-	@ConditionalOnMissingBean
-	public Clock micrometerClock() {
-		return Clock.SYSTEM;
+		@Bean
+		@ConditionalOnMissingBean
+		public CloudWatchMetricPublisher cloudWatchMetricPublisher(CloudWatchAsyncClient client) {
+			return CloudWatchMetricPublisher.builder().cloudWatchClient(client).build();
+		}
+
+		@Bean
+		@ConditionalOnMissingBean
+		public CloudWatchMetricPublisherConfigurer metricPublisherConfigurer(CloudWatchMetricPublisher metricPublisher) {
+			return new CloudWatchMetricPublisherConfigurer(metricPublisher);
+		}
+
 	}
 
 }

@@ -17,17 +17,22 @@ package io.awspring.cloud.autoconfigure;
 
 import java.net.URI;
 import java.time.Duration;
+import java.util.List;
 import java.util.Objects;
-import org.springframework.test.util.ReflectionTestUtils;
+
 import software.amazon.awssdk.awscore.client.config.AwsClientOption;
 import software.amazon.awssdk.awscore.defaultsmode.DefaultsMode;
 import software.amazon.awssdk.core.SdkClient;
+import software.amazon.awssdk.core.client.config.SdkAdvancedClientOption;
 import software.amazon.awssdk.core.client.config.SdkClientConfiguration;
 import software.amazon.awssdk.core.client.config.SdkClientOption;
 import software.amazon.awssdk.http.SdkHttpClient;
 import software.amazon.awssdk.http.async.SdkAsyncHttpClient;
+import software.amazon.awssdk.metrics.MetricPublisher;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.utils.AttributeMap;
+
+import org.springframework.test.util.ReflectionTestUtils;
 
 public class ConfiguredAwsClient {
 
@@ -83,6 +88,14 @@ public class ConfiguredAwsClient {
 
 	public SdkAsyncHttpClient getAsyncHttpClient() {
 		return clientConfigurationAttributes.get(SdkClientOption.ASYNC_HTTP_CLIENT);
+	}
+
+	public List<MetricPublisher> getMetricPublishers() {
+		return clientConfigurationAttributes.get(SdkClientOption.METRIC_PUBLISHERS);
+	}
+
+	public String getClientUserAgentSuffix() {
+		return clientConfigurationAttributes.get(SdkAdvancedClientOption.USER_AGENT_SUFFIX);
 	}
 
 }

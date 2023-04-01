@@ -15,7 +15,8 @@
  */
 package io.awspring.cloud.autoconfigure.metrics;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import java.net.URI;
+import java.time.Duration;
 
 import io.awspring.cloud.autoconfigure.ConfiguredAwsClient;
 import io.awspring.cloud.autoconfigure.core.AwsAutoConfiguration;
@@ -25,20 +26,22 @@ import io.awspring.cloud.autoconfigure.core.RegionProviderAutoConfiguration;
 import io.micrometer.cloudwatch2.CloudWatchConfig;
 import io.micrometer.cloudwatch2.CloudWatchMeterRegistry;
 import io.micrometer.core.instrument.Clock;
-import java.net.URI;
-import java.time.Duration;
 import org.junit.jupiter.api.Test;
+import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
+import software.amazon.awssdk.http.async.SdkAsyncHttpClient;
+import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient;
+import software.amazon.awssdk.metrics.publishers.cloudwatch.CloudWatchMetricPublisher;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClient;
+import software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClientBuilder;
+
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.lang.Nullable;
-import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
-import software.amazon.awssdk.http.async.SdkAsyncHttpClient;
-import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient;
-import software.amazon.awssdk.regions.Region;
-import software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClient;
-import software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClientBuilder;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Test for the {@link CloudWatchExportAutoConfiguration}.
@@ -131,6 +134,31 @@ class CloudWatchExportAutoConfigurationTest {
 					ConfiguredAwsClient client = new ConfiguredAwsClient(context.getBean(CloudWatchAsyncClient.class));
 					assertThat(client.getApiCallTimeout()).isEqualTo(Duration.ofMillis(1542));
 					assertThat(client.getAsyncHttpClient()).isNotNull();
+				});
+	}
+
+	@Test
+	void configuresCloudWatchMetricPublisher() {
+		this.contextRunner.run(context -> {
+			assertThat(context).hasSingleBean(CloudWatchMetricPublisher.class);
+			assertThat(context).hasSingleBean(CloudWatchMetricPublisherConfigurer.class);
+		});
+	}
+
+	@Test
+	void shouldNotConfigureMetricPublisherForCloudWatchClient() {
+		this.contextRunner.run(context -> {
+			ConfiguredAwsClient client = new ConfiguredAwsClient(context.getBean(CloudWatchAsyncClient.class));
+			assertThat(client.getMetricPublishers()).isEmpty();
+		});
+	}
+
+	@Test
+	void shouldNotConfugureMetricPublisherIfOptOut() {
+		this.contextRunner.withPropertyValues("spring.cloud.aws.cloudwatch.metric-publisher.enabled:false")
+				.run(context -> {
+					assertThat(context).doesNotHaveBean(CloudWatchMetricPublisher.class);
+					assertThat(context).doesNotHaveBean(CloudWatchMetricPublisherConfigurer.class);
 				});
 	}
 
