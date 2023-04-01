@@ -15,15 +15,11 @@
  */
 package io.awspring.cloud.autoconfigure.core;
 
-import io.awspring.cloud.core.SpringCloudClientConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
-import software.amazon.awssdk.metrics.publishers.cloudwatch.CloudWatchMetricPublisher;
 import software.amazon.awssdk.regions.providers.AwsRegionProvider;
-
-import java.util.Optional;
 
 /**
  * Autoconfigures AWS environment.
@@ -35,19 +31,15 @@ import java.util.Optional;
 @EnableConfigurationProperties(AwsProperties.class)
 public class AwsAutoConfiguration {
 
-    private final AwsProperties awsProperties;
+	private final AwsProperties awsProperties;
 
-    public AwsAutoConfiguration(AwsProperties awsProperties) {
-        this.awsProperties = awsProperties;
-    }
+	public AwsAutoConfiguration(AwsProperties awsProperties) {
+		this.awsProperties = awsProperties;
+	}
 
-    @Bean
-    public AwsClientBuilderConfigurer awsClientBuilderConfigurer(AwsCredentialsProvider credentialsProvider,
-            AwsRegionProvider awsRegionProvider, Optional<CloudWatchMetricPublisher> metricPublisher) {
-        var overrideConfiguration = new SpringCloudClientConfiguration().clientOverrideConfiguration();
-        if (metricPublisher.isPresent()) {
-            overrideConfiguration = overrideConfiguration.toBuilder().addMetricPublisher(metricPublisher.get()).build();
-        }
-        return new AwsClientBuilderConfigurer(credentialsProvider, awsRegionProvider, awsProperties, overrideConfiguration);
-    }
+	@Bean
+	public AwsClientBuilderConfigurer awsClientBuilderConfigurer(AwsCredentialsProvider credentialsProvider,
+			AwsRegionProvider awsRegionProvider) {
+		return new AwsClientBuilderConfigurer(credentialsProvider, awsRegionProvider, awsProperties);
+	}
 }
