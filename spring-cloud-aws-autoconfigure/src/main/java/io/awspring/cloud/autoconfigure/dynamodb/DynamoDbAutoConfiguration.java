@@ -15,13 +15,27 @@
  */
 package io.awspring.cloud.autoconfigure.dynamodb;
 
+import java.io.IOException;
+import java.util.Optional;
+
 import io.awspring.cloud.autoconfigure.core.AwsClientBuilderConfigurer;
 import io.awspring.cloud.autoconfigure.core.AwsClientCustomizer;
 import io.awspring.cloud.autoconfigure.core.CredentialsProviderAutoConfiguration;
 import io.awspring.cloud.autoconfigure.core.RegionProviderAutoConfiguration;
-import io.awspring.cloud.dynamodb.*;
-import java.io.IOException;
-import java.util.Optional;
+import io.awspring.cloud.autoconfigure.metrics.CloudWatchMetricPublisherConfigurer;
+import io.awspring.cloud.dynamodb.DefaultDynamoDbTableNameResolver;
+import io.awspring.cloud.dynamodb.DefaultDynamoDbTableSchemaResolver;
+import io.awspring.cloud.dynamodb.DynamoDbOperations;
+import io.awspring.cloud.dynamodb.DynamoDbTableNameResolver;
+import io.awspring.cloud.dynamodb.DynamoDbTableSchemaResolver;
+import io.awspring.cloud.dynamodb.DynamoDbTemplate;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
+import software.amazon.awssdk.regions.providers.AwsRegionProvider;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClientBuilder;
+import software.amazon.dax.ClusterDaxClient;
+
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
@@ -35,12 +49,6 @@ import org.springframework.boot.context.properties.PropertyMapper;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Conditional;
 import org.springframework.context.annotation.Configuration;
-import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
-import software.amazon.awssdk.regions.providers.AwsRegionProvider;
-import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
-import software.amazon.awssdk.services.dynamodb.DynamoDbClientBuilder;
-import software.amazon.dax.ClusterDaxClient;
 
 /**
  * {@link EnableAutoConfiguration Auto-configuration} for DynamoDB integration.
@@ -102,9 +110,12 @@ public class DynamoDbAutoConfiguration {
 		@ConditionalOnMissingBean
 		@Bean
 		public DynamoDbClient dynamoDbClient(AwsClientBuilderConfigurer awsClientBuilderConfigurer,
-				ObjectProvider<AwsClientCustomizer<DynamoDbClientBuilder>> configurer, DynamoDbProperties properties) {
-			return awsClientBuilderConfigurer
-					.configure(DynamoDbClient.builder(), properties, configurer.getIfAvailable()).build();
+				ObjectProvider<AwsClientCustomizer<DynamoDbClientBuilder>> configurer, DynamoDbProperties properties,
+				ObjectProvider<CloudWatchMetricPublisherConfigurer> metricPublisherConfigurer) {
+			DynamoDbClientBuilder clientBuilder = awsClientBuilderConfigurer
+					.configure(DynamoDbClient.builder(), properties, configurer.getIfAvailable());
+			return CloudWatchMetricPublisherConfigurer.configureIfAvailable(clientBuilder,
+					metricPublisherConfigurer).build();
 		}
 
 	}

@@ -15,10 +15,13 @@
  */
 package io.awspring.cloud.autoconfigure.metrics;
 
+import java.util.Optional;
+
 import software.amazon.awssdk.awscore.client.builder.AwsClientBuilder;
 import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.metrics.publishers.cloudwatch.CloudWatchMetricPublisher;
 
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.util.Assert;
 
 public class CloudWatchMetricPublisherConfigurer {
@@ -35,4 +38,11 @@ public class CloudWatchMetricPublisherConfigurer {
 		builder.overrideConfiguration(withMetricPublisher);
 		return builder;
 	}
+
+	public static <T extends AwsClientBuilder<?, ?>> T configureIfAvailable(T builder,
+			ObjectProvider<CloudWatchMetricPublisherConfigurer> configurer) {
+		return Optional.ofNullable(configurer.getIfAvailable()).map(c -> c.configure(builder))
+				.orElse(builder);
+	}
+
 }

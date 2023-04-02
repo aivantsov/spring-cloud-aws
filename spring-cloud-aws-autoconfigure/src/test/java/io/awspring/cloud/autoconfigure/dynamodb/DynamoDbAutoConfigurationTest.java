@@ -15,34 +15,39 @@
  */
 package io.awspring.cloud.autoconfigure.dynamodb;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import java.net.URI;
+import java.time.Duration;
 
 import io.awspring.cloud.autoconfigure.ConfiguredAwsClient;
 import io.awspring.cloud.autoconfigure.core.AwsAutoConfiguration;
 import io.awspring.cloud.autoconfigure.core.AwsClientCustomizer;
 import io.awspring.cloud.autoconfigure.core.CredentialsProviderAutoConfiguration;
 import io.awspring.cloud.autoconfigure.core.RegionProviderAutoConfiguration;
+import io.awspring.cloud.autoconfigure.metrics.CloudWatchExportAutoConfiguration;
+import io.awspring.cloud.autoconfigure.metrics.CloudWatchMetricPublisherConfigurer;
 import io.awspring.cloud.dynamodb.DynamoDbTableNameResolver;
 import io.awspring.cloud.dynamodb.DynamoDbTableSchemaResolver;
 import io.awspring.cloud.dynamodb.DynamoDbTemplate;
-import java.net.URI;
-import java.time.Duration;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
+import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
+import software.amazon.awssdk.http.SdkHttpClient;
+import software.amazon.awssdk.http.apache.ApacheHttpClient;
+import software.amazon.awssdk.metrics.publishers.cloudwatch.CloudWatchMetricPublisher;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClientBuilder;
+import software.amazon.dax.ClusterDaxClient;
+
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.FilteredClassLoader;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.lang.Nullable;
-import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
-import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
-import software.amazon.awssdk.http.SdkHttpClient;
-import software.amazon.awssdk.http.apache.ApacheHttpClient;
-import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
-import software.amazon.awssdk.services.dynamodb.DynamoDbClientBuilder;
-import software.amazon.dax.ClusterDaxClient;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Tests for {@link DynamoDbAutoConfiguration}.
@@ -55,7 +60,8 @@ class DynamoDbAutoConfigurationTest {
 			.withPropertyValues("spring.cloud.aws.region.static:eu-west-1",
 					"spring.cloud.aws.credentials.access-key:noop", "spring.cloud.aws.credentials.secret-key:noop")
 			.withConfiguration(AutoConfigurations.of(AwsAutoConfiguration.class, RegionProviderAutoConfiguration.class,
-					CredentialsProviderAutoConfiguration.class, DynamoDbAutoConfiguration.class));
+					CredentialsProviderAutoConfiguration.class, DynamoDbAutoConfiguration.class,
+					CloudWatchExportAutoConfiguration.class));
 
 	@Nested
 	class DynamoDbTests {
@@ -240,6 +246,25 @@ class DynamoDbAutoConfigurationTest {
 					});
 		}
 
+	}
+
+	@Test
+	void shouldConfigureCloudWatchMetricPublisher() {
+		this.contextRunner.run(context -> {
+			assertThat(context).hasSingleBean(CloudWatchMetricPublisherConfigurer.class);
+			var client = new ConfiguredAwsClient(context.getBean(DynamoDbClient.class));
+			assertThat(client.getMetricPublishers()).hasSize(1)
+					.hasOnlyElementsOfType(CloudWatchMetricPublisher.class);
+		});
+	}
+
+	@Test
+	void shouldSkipCloudWatchMetricPublisherIfDisabled() {
+		this.contextRunner.withPropertyValues("spring.cloud.aws.cloudwatch.metric-publisher.enabled:false")
+				.run(context -> {
+					var client = new ConfiguredAwsClient(context.getBean(DynamoDbClient.class));
+					assertThat(client.getMetricPublishers()).isEmpty();
+				});
 	}
 
 	@Configuration(proxyBeanMethods = false)
