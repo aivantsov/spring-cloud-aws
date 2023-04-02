@@ -20,6 +20,7 @@ import io.awspring.cloud.autoconfigure.core.AwsClientBuilderConfigurer;
 import io.awspring.cloud.autoconfigure.core.AwsClientCustomizer;
 import io.awspring.cloud.autoconfigure.core.CredentialsProviderAutoConfiguration;
 import io.awspring.cloud.autoconfigure.core.RegionProviderAutoConfiguration;
+import io.awspring.cloud.autoconfigure.metrics.CloudWatchMetricPublisherConfigurer;
 import io.awspring.cloud.sqs.config.SqsBootstrapConfiguration;
 import io.awspring.cloud.sqs.config.SqsListenerConfigurer;
 import io.awspring.cloud.sqs.config.SqsMessageListenerContainerFactory;
@@ -30,6 +31,9 @@ import io.awspring.cloud.sqs.listener.interceptor.AsyncMessageInterceptor;
 import io.awspring.cloud.sqs.listener.interceptor.MessageInterceptor;
 import io.awspring.cloud.sqs.operations.SqsTemplate;
 import io.awspring.cloud.sqs.operations.SqsTemplateBuilder;
+import software.amazon.awssdk.services.sqs.SqsAsyncClient;
+import software.amazon.awssdk.services.sqs.SqsAsyncClientBuilder;
+
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
@@ -41,8 +45,6 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.context.properties.PropertyMapper;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
-import software.amazon.awssdk.services.sqs.SqsAsyncClient;
-import software.amazon.awssdk.services.sqs.SqsAsyncClientBuilder;
 
 /**
  * {@link EnableAutoConfiguration Auto-configuration} for SQS integration.
@@ -68,9 +70,12 @@ public class SqsAutoConfiguration {
 	@ConditionalOnMissingBean
 	@Bean
 	public SqsAsyncClient sqsAsyncClient(AwsClientBuilderConfigurer awsClientBuilderConfigurer,
-			ObjectProvider<AwsClientCustomizer<SqsAsyncClientBuilder>> configurer) {
-		return awsClientBuilderConfigurer
-				.configure(SqsAsyncClient.builder(), this.sqsProperties, configurer.getIfAvailable()).build();
+			ObjectProvider<AwsClientCustomizer<SqsAsyncClientBuilder>> configurer,
+			ObjectProvider<CloudWatchMetricPublisherConfigurer> metricPublisherConfigurer) {
+		SqsAsyncClientBuilder clientBuilder = awsClientBuilderConfigurer
+				.configure(SqsAsyncClient.builder(), this.sqsProperties, configurer.getIfAvailable());
+		return CloudWatchMetricPublisherConfigurer.configureIfAvailable(clientBuilder,
+				metricPublisherConfigurer).build();
 	}
 
 	@ConditionalOnMissingBean

@@ -15,16 +15,18 @@
  */
 package io.awspring.cloud.autoconfigure.sqs;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.InstanceOfAssertFactories.map;
-import static org.assertj.core.api.InstanceOfAssertFactories.type;
+import java.net.URI;
+import java.time.Duration;
+import java.util.Map;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.awspring.cloud.autoconfigure.ConfiguredAwsClient;
+import io.awspring.cloud.autoconfigure.MetricPublisherAssertions;
 import io.awspring.cloud.autoconfigure.core.AwsAutoConfiguration;
 import io.awspring.cloud.autoconfigure.core.AwsClientCustomizer;
 import io.awspring.cloud.autoconfigure.core.CredentialsProviderAutoConfiguration;
 import io.awspring.cloud.autoconfigure.core.RegionProviderAutoConfiguration;
+import io.awspring.cloud.autoconfigure.metrics.CloudWatchExportAutoConfiguration;
 import io.awspring.cloud.sqs.annotation.SqsListenerAnnotationBeanPostProcessor;
 import io.awspring.cloud.sqs.config.EndpointRegistrar;
 import io.awspring.cloud.sqs.config.SqsBootstrapConfiguration;
@@ -34,22 +36,24 @@ import io.awspring.cloud.sqs.listener.ContainerOptionsBuilder;
 import io.awspring.cloud.sqs.listener.errorhandler.AsyncErrorHandler;
 import io.awspring.cloud.sqs.listener.interceptor.AsyncMessageInterceptor;
 import io.awspring.cloud.sqs.operations.SqsTemplate;
-import java.net.URI;
-import java.time.Duration;
-import java.util.Map;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.autoconfigure.AutoConfigurations;
-import org.springframework.boot.test.context.FilteredClassLoader;
-import org.springframework.boot.test.context.runner.ApplicationContextRunner;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.lang.Nullable;
 import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.core.client.config.SdkClientOption;
 import software.amazon.awssdk.http.async.SdkAsyncHttpClient;
 import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient;
 import software.amazon.awssdk.services.sqs.SqsAsyncClient;
 import software.amazon.awssdk.services.sqs.SqsAsyncClientBuilder;
+
+import org.springframework.boot.autoconfigure.AutoConfigurations;
+import org.springframework.boot.test.context.FilteredClassLoader;
+import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.lang.Nullable;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.InstanceOfAssertFactories.map;
+import static org.assertj.core.api.InstanceOfAssertFactories.type;
 
 /**
  * Tests for {@link SqsAutoConfiguration}.
@@ -64,7 +68,7 @@ class SqsAutoConfigurationTest {
 			.withPropertyValues("spring.cloud.aws.region.static:eu-west-1")
 			.withConfiguration(AutoConfigurations.of(RegionProviderAutoConfiguration.class,
 					CredentialsProviderAutoConfiguration.class, SqsAutoConfiguration.class,
-					AwsAutoConfiguration.class));
+					AwsAutoConfiguration.class, CloudWatchExportAutoConfiguration.class));
 
 	@Test
 	void sqsAutoConfigurationIsDisabled() {
@@ -161,6 +165,18 @@ class SqsAutoConfigurationTest {
 					assertThat(bpp).extracting("endpointRegistrar").asInstanceOf(type(EndpointRegistrar.class))
 							.extracting(EndpointRegistrar::getObjectMapper).isEqualTo(objectMapper);
 				});
+	}
+
+	@Test
+	void shouldConfigureCloudWatchMetricPublisher() {
+		this.contextRunner.run(context ->
+				MetricPublisherAssertions.assertMetricPublisherConfigured(context, SqsAsyncClient.class));
+	}
+
+	@Test
+	void shouldSkipCloudWatchMetricPublisherIfDisabled() {
+		this.contextRunner.withPropertyValues("spring.cloud.aws.cloudwatch.metric-publisher.enabled:false")
+				.run(context -> MetricPublisherAssertions.assertNoMetricPublishers(context, SqsAsyncClient.class));
 	}
 
 	@Configuration(proxyBeanMethods = false)

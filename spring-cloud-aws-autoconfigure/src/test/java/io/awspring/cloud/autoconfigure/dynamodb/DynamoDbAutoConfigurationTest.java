@@ -19,12 +19,12 @@ import java.net.URI;
 import java.time.Duration;
 
 import io.awspring.cloud.autoconfigure.ConfiguredAwsClient;
+import io.awspring.cloud.autoconfigure.MetricPublisherAssertions;
 import io.awspring.cloud.autoconfigure.core.AwsAutoConfiguration;
 import io.awspring.cloud.autoconfigure.core.AwsClientCustomizer;
 import io.awspring.cloud.autoconfigure.core.CredentialsProviderAutoConfiguration;
 import io.awspring.cloud.autoconfigure.core.RegionProviderAutoConfiguration;
 import io.awspring.cloud.autoconfigure.metrics.CloudWatchExportAutoConfiguration;
-import io.awspring.cloud.autoconfigure.metrics.CloudWatchMetricPublisherConfigurer;
 import io.awspring.cloud.dynamodb.DynamoDbTableNameResolver;
 import io.awspring.cloud.dynamodb.DynamoDbTableSchemaResolver;
 import io.awspring.cloud.dynamodb.DynamoDbTemplate;
@@ -35,7 +35,6 @@ import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import software.amazon.awssdk.http.SdkHttpClient;
 import software.amazon.awssdk.http.apache.ApacheHttpClient;
-import software.amazon.awssdk.metrics.publishers.cloudwatch.CloudWatchMetricPublisher;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClientBuilder;
 import software.amazon.dax.ClusterDaxClient;
@@ -250,21 +249,14 @@ class DynamoDbAutoConfigurationTest {
 
 	@Test
 	void shouldConfigureCloudWatchMetricPublisher() {
-		this.contextRunner.run(context -> {
-			assertThat(context).hasSingleBean(CloudWatchMetricPublisherConfigurer.class);
-			var client = new ConfiguredAwsClient(context.getBean(DynamoDbClient.class));
-			assertThat(client.getMetricPublishers()).hasSize(1)
-					.hasOnlyElementsOfType(CloudWatchMetricPublisher.class);
-		});
+		this.contextRunner.run(context ->
+				MetricPublisherAssertions.assertMetricPublisherConfigured(context, DynamoDbClient.class));
 	}
 
 	@Test
 	void shouldSkipCloudWatchMetricPublisherIfDisabled() {
 		this.contextRunner.withPropertyValues("spring.cloud.aws.cloudwatch.metric-publisher.enabled:false")
-				.run(context -> {
-					var client = new ConfiguredAwsClient(context.getBean(DynamoDbClient.class));
-					assertThat(client.getMetricPublishers()).isEmpty();
-				});
+				.run(context -> MetricPublisherAssertions.assertNoMetricPublishers(context, DynamoDbClient.class));
 	}
 
 	@Configuration(proxyBeanMethods = false)
